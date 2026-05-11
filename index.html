@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISTQB Test Intelligence Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f3ef;
+  --surface: #ffffff;
+  --surface2: #f0efe9;
+  --border: #e2e0d8;
+  --text: #1a1916;
+  --muted: #8a8880;
+  --accent: #1a1916;
+  --green: #1a6b3c;
+  --green-bg: #e8f5ee;
+  --red: #b91c1c;
+  --red-bg: #fef2f2;
+  --amber: #92400e;
+  --amber-bg: #fffbeb;
+  --blue: #1e40af;
+  --blue-bg: #eff6ff;
+  --font-sans: 'IBM Plex Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-sans); min-height: 100vh; display: flex; flex-direction: column; }
+header { background: var(--accent); color: white; padding: 0 2rem; height: 52px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.logo { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 500; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.75rem; }
+.logo-badge { background: rgba(255,255,255,0.15); padding: 2px 8px; border-radius: 3px; font-size: 0.7rem; letter-spacing: 0.08em; }
+.header-right { font-size: 0.72rem; color: rgba(255,255,255,0.5); font-family: var(--font-mono); }
+.layout { display: flex; flex: 1; overflow: hidden; height: calc(100vh - 52px); }
+.left-panel { width: 340px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; }
+.panel-block { border-bottom: 1px solid var(--border); padding: 1.25rem; }
+.panel-title { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem; }
+.upload-zone { border: 1.5px dashed var(--border); border-radius: 8px; padding: 1.5rem 1rem; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--surface2); }
+.upload-zone:hover { border-color: var(--accent); background: white; }
+.upload-zone.dragging { border-color: var(--accent); background: white; }
+.upload-zone input { display: none; }
+.upload-icon { font-size: 1.5rem; margin-bottom: 0.5rem; display: block; }
+.upload-title { font-size: 0.85rem; font-weight: 500; color: var(--text); margin-bottom: 0.25rem; }
+.upload-sub { font-size: 0.75rem; color: var(--muted); }
+.file-loaded { display: none; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: var(--green-bg); border-radius: 8px; border: 1px solid #bbf7d0; }
+.file-loaded.visible { display: flex; }
+.file-loaded-name { font-size: 0.8rem; font-weight: 500; color: var(--green); flex: 1; font-family: var(--font-mono); }
+.file-loaded-meta { font-size: 0.72rem; color: #15803d; margin-top: 2px; }
+.clear-btn { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 1.1rem; line-height: 1; padding: 0 2px; }
+.analysis-btns { display: flex; flex-direction: column; gap: 0.5rem; }
+.analysis-btn { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); cursor: pointer; text-align: left; font-family: var(--font-sans); transition: all 0.15s; width: 100%; }
+.analysis-btn:hover { background: white; border-color: var(--accent); }
+.analysis-btn-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+.analysis-btn-text { flex: 1; }
+.analysis-btn-label { font-size: 0.82rem; font-weight: 500; color: var(--text); }
+.analysis-btn-sub { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
+.istqb-badge { font-family: var(--font-mono); font-size: 0.6rem; padding: 2px 5px; border-radius: 3px; background: var(--blue-bg); color: var(--blue); border: 1px solid #bfdbfe; white-space: nowrap; }
+.right-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.chat-header { padding: 0.875rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.chat-title { font-size: 0.82rem; font-weight: 500; color: var(--text); }
+.chat-sub { font-size: 0.72rem; color: var(--muted); font-family: var(--font-mono); }
+.clear-chat-btn { font-size: 0.72rem; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; cursor: pointer; font-family: var(--font-mono); }
+.clear-chat-btn:hover { color: var(--text); }
+.messages { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+.messages::-webkit-scrollbar { width: 4px; }
+.messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 1rem; color: var(--muted); text-align: center; padding: 3rem; }
+.empty-mark { width: 56px; height: 56px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+.empty-state h3 { font-size: 1rem; font-weight: 600; color: var(--text); }
+.empty-state p { font-size: 0.82rem; line-height: 1.7; max-width: 320px; color: var(--muted); }
+.empty-steps { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; }
+.empty-step { display: flex; align-items: center; gap: 0.75rem; font-size: 0.8rem; color: var(--muted); }
+.step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 500; flex-shrink: 0; color: var(--text); }
+.msg { display: flex; gap: 0.75rem; animation: fadeUp 0.25s ease; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.msg.user { flex-direction: row-reverse; }
+.avatar { width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 600; flex-shrink: 0; margin-top: 2px; font-family: var(--font-mono); }
+.avatar.agent { background: var(--accent); color: white; }
+.avatar.user { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+.bubble { max-width: 82%; padding: 0.875rem 1.1rem; border-radius: 10px; font-size: 0.83rem; line-height: 1.65; }
+.msg.agent .bubble { background: white; border: 1px solid var(--border); color: var(--text); border-top-left-radius: 3px; }
+.msg.user .bubble { background: var(--accent); color: white; border-top-right-radius: 3px; }
+.bubble strong { font-weight: 600; }
+.bubble ul, .bubble ol { padding-left: 1.25rem; margin: 0.5rem 0; }
+.bubble li { margin: 0.3rem 0; }
+.tag { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 0.7rem; font-family: var(--font-mono); font-weight: 500; margin: 1px 2px; }
+.tag.critical { background: var(--red-bg); color: var(--red); border: 1px solid #fecaca; }
+.tag.high { background: var(--amber-bg); color: var(--amber); border: 1px solid #fde68a; }
+.tag.medium { background: var(--blue-bg); color: var(--blue); border: 1px solid #bfdbfe; }
+.tag.ok { background: var(--green-bg); color: var(--green); border: 1px solid #bbf7d0; }
+.tag.istqb { background: #f3f0ff; color: #5b21b6; border: 1px solid #ddd6fe; }
+.section-head { font-size: 0.72rem; font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0.75rem 0 0.4rem; }
+.thinking { display: flex; gap: 5px; align-items: center; padding: 0.25rem 0; }
+.dot { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%,80%,100% { opacity: 0.2; } 40% { opacity: 1; } }
+.input-area { border-top: 1px solid var(--border); padding: 1rem 1.5rem; background: var(--surface); flex-shrink: 0; }
+.input-row { display: flex; gap: 0.75rem; align-items: flex-end; }
+textarea { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--font-sans); font-size: 0.83rem; padding: 0.65rem 0.9rem; resize: none; min-height: 42px; max-height: 120px; line-height: 1.5; outline: none; transition: border-color 0.15s; }
+textarea:focus { border-color: var(--accent); background: white; }
+textarea::placeholder { color: var(--muted); }
+.send-btn { width: 42px; height: 42px; border-radius: 8px; background: var(--accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
+.send-btn:hover { opacity: 0.85; }
+.send-btn:active { transform: scale(0.97); }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.send-btn svg { width: 16px; height: 16px; fill: white; }
+.input-hint { font-size: 0.7rem; color: var(--muted); margin-top: 0.5rem; font-family: var(--font-mono); }
+code { background: var(--surface2); padding: 1px 5px; border-radius: 3px; font-family: var(--font-mono); font-size: 0.85em; border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    ISTQB Test Intelligence Agent
+    <span class="logo-badge">POWERED BY GEMINI</span>
+  </div>
+  <div class="header-right">Google Cloud Rapid Agent Hackathon · MongoDB Track</div>
+</header>
+
+<div class="layout">
+  <div class="left-panel">
+
+    <div class="panel-block">
+      <div class="panel-title">01 — Upload test cases</div>
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('csv-input').click()">
+        <input type="file" id="csv-input" accept=".csv" onchange="handleFile(this.files[0])">
+        <span class="upload-icon">⬆</span>
+        <div class="upload-title">Upload CSV file</div>
+        <div class="upload-sub">Test ID · Test Name · Steps · Expected Result</div>
+      </div>
+      <div class="file-loaded" id="file-loaded">
+        <div style="flex:1;">
+          <div class="file-loaded-name" id="file-name-display">—</div>
+          <div class="file-loaded-meta" id="file-rows-display">—</div>
+        </div>
+        <button class="clear-btn" onclick="clearFile()">×</button>
+      </div>
+    </div>
+
+    <div class="panel-block">
+      <div class="panel-title">02 — Run analysis</div>
+      <div class="analysis-btns">
+        <button class="analysis-btn" onclick="runAnalysis('full')">
+          <div class="analysis-btn-icon" style="background:#f3f0ff;">📋</div>
+          <div class="analysis-btn-text">
+            <div class="analysis-btn-label">Full ISTQB Analysis</div>
+            <div class="analysis-btn-sub">Coverage · Techniques · Gaps · Quality</div>
+          </div>
+          <span class="istqb-badge">ISTQB</span>
+        </button>
+        <button class="analysis-btn" onclick="runAnalysis('security')">
+          <div class="analysis-btn-icon" style="background:#fef2f2;">🔐</div>
+          <div class="analysis-btn-text">
+            <div class="analysis-btn-label">Security Gap Analysis</div>
+            <div class="analysis-btn-sub">OWASP · Auth · Injection · Data</div>
+          </div>
+          <span class="istqb-badge" style="background:#fef2f2;color:#b91c1c;border-color:#fecaca;">SEC</span>
+        </button>
+        <button class="analysis-btn" onclick="runAnalysis('coverage')">
+          <div class="analysis-btn-icon" style="background:#eff6ff;">🗺</div>
+          <div class="analysis-btn-text">
+            <div class="analysis-btn-label">Coverage Map</div>
+            <div class="analysis-btn-sub">What's tested · What's missing</div>
+          </div>
+          <span class="istqb-badge">BVA/EP</span>
+        </button>
+        <button class="analysis-btn" onclick="runAnalysis('optimize')">
+          <div class="analysis-btn-icon" style="background:#f0fdf4;">✏️</div>
+          <div class="analysis-btn-text">
+            <div class="analysis-btn-label">Optimize Test Cases</div>
+            <div class="analysis-btn-sub">Rewrite weak cases · Add assertions</div>
+          </div>
+          <span class="istqb-badge" style="background:#f0fdf4;color:#166534;border-color:#bbf7d0;">OPT</span>
+        </button>
+        <button class="analysis-btn" onclick="runAnalysis('risk')">
+          <div class="analysis-btn-icon" style="background:#fffbeb;">⚡</div>
+          <div class="analysis-btn-text">
+            <div class="analysis-btn-label">Risk-Based Prioritization</div>
+            <div class="analysis-btn-sub">Which tests matter most · Why</div>
+          </div>
+          <span class="istqb-badge" style="background:#fffbeb;color:#92400e;border-color:#fde68a;">RBT</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-block">
+      <div class="panel-title">03 — Ask anything</div>
+      <div style="font-size:0.78rem;color:var(--muted);line-height:1.6;">
+        Type a custom question below about your test cases — test design, ISTQB techniques, missing scenarios, or how to improve a specific test.
+      </div>
+    </div>
+
+  </div>
+
+  <div class="right-panel">
+    <div class="chat-header">
+      <div>
+        <div class="chat-title">Analysis Results</div>
+        <div class="chat-sub" id="chat-sub">No file loaded</div>
+      </div>
+      <button class="clear-chat-btn" onclick="clearChat()">clear chat</button>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-mark">◈</div>
+        <h3>ISTQB Test Intelligence Agent</h3>
+        <p>Upload your test cases and run an analysis to identify coverage gaps, security vulnerabilities, and ISTQB improvements.</p>
+        <div class="empty-steps">
+          <div class="empty-step"><div class="step-num">1</div>Upload a CSV with your test cases</div>
+          <div class="empty-step"><div class="step-num">2</div>Choose an analysis type from the left</div>
+          <div class="empty-step"><div class="step-num">3</div>Get actionable ISTQB recommendations</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <textarea id="msg-input"
+          placeholder="Ask about specific test cases, missing scenarios, ISTQB techniques..."
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"
+          oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">Enter to send · Shift+Enter for new line</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_KEY = 'YOUR_API_KEY_HERE';
+const API_URL = 'https://api.anthropic.com/v1/messages';
+
+let csvData = null;
+let csvFileName = null;
+let history = [];
+let loading = false;
+
+const SYSTEM_PROMPT = `You are an expert ISTQB-certified QA Test Analyst specializing in test case quality, coverage analysis, and security testing for standalone applications.
+
+When analyzing test cases from a CSV, you have deep knowledge of:
+
+ISTQB TECHNIQUES:
+- Boundary Value Analysis (BVA): test at boundaries, just inside/outside
+- Equivalence Partitioning (EP): valid/invalid partitions for each input
+- Decision Table Testing: combinations of conditions and actions
+- State Transition Testing: valid/invalid state changes
+- Use Case Testing: end-to-end scenario coverage
+- Error Guessing: experience-based defect prediction
+
+SECURITY TESTING (always emphasize this):
+- Authentication and Authorization flaws (broken auth, privilege escalation)
+- Input Validation (SQL injection, XSS, command injection, path traversal)
+- Session Management (session fixation, timeout, CSRF)
+- Sensitive Data Exposure (PII, credentials in logs/URLs)
+- Error Handling (stack traces, verbose errors)
+- Business Logic vulnerabilities (price manipulation, workflow bypass)
+- File upload vulnerabilities
+- Denial of Service vectors
+
+TEST CASE QUALITY CRITERIA:
+- Clear, single objective per test case
+- Specific expected results (not "should work")
+- Negative test cases present
+- Edge cases and boundary values covered
+- Error and exception scenarios included
+- Preconditions clearly stated
+- Traceability to requirements
+
+FORMAT YOUR RESPONSES WITH:
+- Use [CRITICAL], [HIGH], [MEDIUM], [LOW] severity tags for issues
+- Use [ISTQB: TECHNIQUE_NAME] to reference specific techniques
+- Use [SECURITY] to flag security-related gaps
+- Use [MISSING] to flag absent test scenarios
+- Use [OPTIMIZE] to flag improvement suggestions
+- Be specific and reference actual test IDs and names from the CSV
+- End security sections with a prioritized list of the top 5 most critical missing security tests
+
+Always infer what the application does from the test cases and frame your analysis in that context.`;
+
+const ANALYSIS_PROMPTS = {
+  full: `Perform a comprehensive ISTQB test analysis on these test cases. Structure your response:
+1. Application summary (what does this app do based on the test cases?)
+2. Coverage assessment — what is well tested vs missing
+3. ISTQB technique gaps — which techniques are underused (BVA, EP, decision tables, state transitions)
+4. Security testing gaps — critical missing security test cases [SECURITY]
+5. Test case quality issues — specific cases that need improvement
+6. Top 10 recommended new test cases to add with full details`,
+
+  security: `Focus ONLY on security testing gaps. Analyze these test cases against OWASP Top 10 and ISTQB security testing principles for a standalone application:
+1. What security areas ARE currently tested
+2. CRITICAL missing security tests (authentication, authorization, injection, session, data exposure)
+3. Business logic security gaps specific to this application
+4. Write out 8 specific new security test cases with full steps and expected results
+5. Prioritized remediation roadmap`,
+
+  coverage: `Map the test coverage of these test cases:
+1. Feature and function coverage — what areas are tested
+2. Boundary Value Analysis gaps — where are boundaries not being tested
+3. Equivalence Partitioning gaps — missing valid and invalid partitions
+4. Negative test case coverage — what failure scenarios are missing
+5. Decision and condition coverage — untested combinations
+6. Simple text-based coverage breakdown by area`,
+
+  optimize: `Review these test cases for quality and rewrite the weakest ones:
+1. Identify the 5 weakest test cases (vague objectives, missing assertions, poor steps)
+2. For each weak test case provide a fully rewritten improved version
+3. Flag test cases with missing preconditions
+4. Flag test cases with non-specific expected results
+5. Suggest how to split any test cases that test multiple things at once`,
+
+  risk: `Apply ISTQB Risk-Based Testing principles to these test cases:
+1. Infer the risk profile of this application from the test cases
+2. Classify each test area by risk level (business impact times likelihood of failure)
+3. Identify the highest risk untested areas
+4. Recommend a test execution priority order
+5. Suggest which test cases could be removed or merged without losing coverage`
+};
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    csvData = e.target.result;
+    csvFileName = file.name;
+    const rows = csvData.trim().split('\n').length - 1;
+    document.getElementById('file-loaded').classList.add('visible');
+    document.getElementById('upload-zone').style.display = 'none';
+    document.getElementById('file-name-display').textContent = file.name;
+    document.getElementById('file-rows-display').textContent = rows + ' test cases loaded';
+    document.getElementById('chat-sub').textContent = file.name + ' · ' + rows + ' test cases';
+    addAgentMsg('File loaded: <strong>' + file.name + '</strong> — ' + rows + ' test cases detected.<br><br>Choose an analysis type on the left, or ask me anything about your test cases.');
+  };
+  reader.readAsText(file);
+}
+
+function clearFile() {
+  csvData = null;
+  csvFileName = null;
+  document.getElementById('file-loaded').classList.remove('visible');
+  document.getElementById('upload-zone').style.display = 'block';
+  document.getElementById('csv-input').value = '';
+  document.getElementById('chat-sub').textContent = 'No file loaded';
+}
+
+function clearChat() {
+  history = [];
+  document.getElementById('messages').innerHTML = '';
+}
+
+function runAnalysis(type) {
+  if (!csvData) {
+    addAgentMsg('Please upload a CSV file first using the panel on the left.');
+    return;
+  }
+  const labels = { full: 'Full ISTQB Analysis', security: 'Security Gap Analysis', coverage: 'Coverage Map', optimize: 'Optimize Test Cases', risk: 'Risk-Based Prioritization' };
+  addUserMsg('Run: ' + labels[type]);
+  callAPI(ANALYSIS_PROMPTS[type] + '\n\nHere are the test cases from ' + csvFileName + ':\n\n' + csvData);
+}
+
+function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text || loading) return;
+  input.value = '';
+  input.style.height = 'auto';
+  addUserMsg(text);
+  const content = csvData ? text + '\n\nContext — test cases from ' + csvFileName + ':\n\n' + csvData : text;
+  callAPI(content);
+}
+
+async function callAPI(userContent) {
+  if (loading) return;
+  loading = true;
+  document.getElementById('send-btn').disabled = true;
+  history.push({ role: 'user', content: userContent });
+  const thinkingEl = showThinking();
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: history
+      })
+    });
+    const data = await res.json();
+    thinkingEl.remove();
+    const reply = data.content?.[0]?.text || 'No response received.';
+    history.push({ role: 'assistant', content: reply });
+    addAgentMsg(formatReply(reply));
+  } catch (err) {
+    thinkingEl.remove();
+    addAgentMsg('<span style="color:var(--red)">API connection error. Check your API key and try again.</span>');
+  }
+  loading = false;
+  document.getElementById('send-btn').disabled = false;
+}
+
+function formatReply(text) {
+  text = text.replace(/\[CRITICAL\]/g, '<span class="tag critical">CRITICAL</span>');
+  text = text.replace(/\[HIGH\]/g, '<span class="tag high">HIGH</span>');
+  text = text.replace(/\[MEDIUM\]/g, '<span class="tag medium">MEDIUM</span>');
+  text = text.replace(/\[LOW\]/g, '<span class="tag ok">LOW</span>');
+  text = text.replace(/\[SECURITY\]/g, '<span class="tag critical">SECURITY</span>');
+  text = text.replace(/\[MISSING\]/g, '<span class="tag high">MISSING</span>');
+  text = text.replace(/\[OPTIMIZE\]/g, '<span class="tag medium">OPTIMIZE</span>');
+  text = text.replace(/\[ISTQB: (.*?)\]/g, '<span class="tag istqb">ISTQB: $1</span>');
+  text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/`(.*?)`/g, '<code>$1</code>');
+  text = text.replace(/^### (.*)/gm, '<div class="section-head">$1</div>');
+  text = text.replace(/^## (.*)/gm, '<div class="section-head" style="font-size:0.78rem;color:var(--text);margin-top:1rem;">$1</div>');
+  text = text.replace(/^- (.*)/gm, '<li>$1</li>');
+  text = text.replace(/(<li>[\s\S]*?<\/li>)+/g, (m) => '<ul>' + m + '</ul>');
+  text = text.replace(/\n\n/g, '<br><br>');
+  text = text.replace(/\n/g, '<br>');
+  return text;
+}
+
+function addUserMsg(text) {
+  removeEmpty();
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = '<div class="avatar user">YOU</div><div class="bubble">' + text + '</div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addAgentMsg(html) {
+  removeEmpty();
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg agent';
+  div.innerHTML = '<div class="avatar agent">QA</div><div class="bubble">' + html + '</div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showThinking() {
+  removeEmpty();
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg agent';
+  div.innerHTML = '<div class="avatar agent">QA</div><div class="bubble"><div class="thinking"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function removeEmpty() {
+  const e = document.getElementById('empty-state');
+  if (e) e.remove();
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragging'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragging'));
+zone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  zone.classList.remove('dragging');
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.endsWith('.csv')) handleFile(f);
+});
+</script>
+</body>
+</html>
